@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Khmer AI Voice Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b; --border: #334155;
+      --text: #f8fafc; --muted: #94a3b8; --accent: #f97316; --accent2: #3b82f6;
+    }
+    * { box-sizing: border-box; font-family: 'Kantumruy Pro', system-ui, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 14px; }
+    .container { max-width: 680px; margin: 0 auto; }
+    .header { text-align: center; padding: 14px 10px; background: linear-gradient(135deg, #ea580c, #2563eb); border-radius: 16px; margin-bottom: 14px; }
+    .header h1 { margin: 0; font-size: 1.25rem; }
+    .header p { margin: 4px 0 0; font-size: 0.82rem; opacity: 0.92; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600; }
+    input, select, textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #0f172a; color: var(--text); font-size: 0.95rem; margin-bottom: 10px; }
+    textarea { resize: vertical; min-height: 110px; line-height: 1.5; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; color: #fff; background: var(--accent); transition: 0.2s; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-blue { background: var(--accent2); }
+    .btn-sm { width: auto; padding: 8px 12px; font-size: 0.82rem; background: #334155; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--muted); font-weight: 700; cursor: pointer; }
+    .tab-btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+    .hidden { display: none; }
+    .status { font-size: 0.85rem; padding: 10px; border-radius: 10px; background: #0f172a; border: 1px solid var(--border); white-space: pre-wrap; word-break: break-word; }
+    audio { width: 100%; margin: 8px 0; }
+    .hint { font-size: 0.78rem; color: var(--muted); margin: -4px 0 10px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🎙️ Khmer AI Voice Studio</h1>
+    <p>បកប្រែអត្ថបទ &amp; សំឡេងមនុស្សពិតច្បាស់ៗ • ប្រើបានរហូត</p>
+  </div>
+
+  <div class="card">
+    <label>🔑 Gemini API Key (រក្សាទុកក្នុងទូរស័ព្ទស្វ័យប្រវត្តិ)</label>
+    <div class="row">
+      <input type="password" id="apiKey" placeholder="បិទភ្ជាប់ AIzaSy... នៅទីនេះ" style="margin-bottom:0" />
+      <button class="btn btn-sm" id="toggleKeyBtn" type="button" style="flex:0 0 auto">👁️</button>
+    </div>
+    <div id="keyStatus" class="hint" style="margin-top:6px;margin-bottom:0">យក Key ឥតគិតថ្លៃពី aistudio.google.com</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tab1Btn" type="button">១. បកប្រែ &amp; សំឡេង</button>
+    <button class="tab-btn" id="tab2Btn" type="button">២. រចនា &amp; ក្លូនសំឡេង</button>
+  </div>
+
+  <div id="tab1Panel">
+    <div class="card">
+      <label>📝 អត្ថបទដើម (ភាសាអ្វីក៏បាន)</label>
+      <textarea id="rawText" placeholder="បិទភ្ជាប់អត្ថបទចិន អង់គ្លេស ថៃ ឬខ្មែរនៅទីនេះ..."></textarea>
+
+      <div class="row">
+        <div>
+          <label>🌐 បកប្រែទៅជា</label>
+          <select id="targetLang">
+            <option value="ភាសាខ្មែរ (Khmer)">ភាសាខ្មែរ (Khmer)</option>
+            <option value="NO_TRANSLATE">មិនបាច់បកប្រែ (អានអត្ថបទដើម)</option>
+            <option value="ភាសាអង់គ្លេស (English)">អង់គ្លេស (English)</option>
+            <option value="ភាសាចិន (Chinese)">ចិន (Chinese)</option>
+            <option value="ភាសាថៃ (Thai)">ថៃ (Thai)</option>
+          </select>
+        </div>
+        <div>
+          <label>✍️ ស្ទីលបកប្រែ</label>
+          <select id="transStyle">
+            <option value="សម្រាយរឿង (ធម្មជាតិ ទាក់ទាញ)">សម្រាយរឿង</option>
+            <option value="សន្ទនាធម្មជាតិ ច្បាស់ៗ">សន្ទនាធម្មជាតិ</option>
+            <option value="ផ្លូវការ ឬព័ត៌មាន">ផ្លូវការ / ព័ត៌មាន</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>🗣️ សំឡេងមនុស្ស AI</label>
+          <select id="voiceSelect">
+            <option value="Kore">Kore (ស្រី - ស្រទន់ ច្បាស់)</option>
+            <option value="Zephyr">Zephyr (ស្រី - រួសរាយ រលូន)</option>
+            <option value="Fenrir">Fenrir (ប្រុស - មាំ ច្បាស់)</option>
+            <option value="Puck">Puck (ប្រុស - ក្មេង រួសរាយ)</option>
+            <option value="Charon">Charon (ប្រុស - សំឡេងជ្រៅ និទានរឿង)</option>
+          </select>
+        </div>
+        <div>
+          <label>🎭 អារម្មណ៍សំឡេង</label>
+          <select id="toneStyle">
+            <option value="Speak clearly, warmly, and naturally like a real human narrator at a steady pace.">ធម្មជាតិ ច្បាស់ៗ</option>
+            <option value="Speak expressively like an engaging movie storyteller with natural pauses and clear pronunciation.">សម្រាយរឿង មានអារម្មណ៍</option>
+            <option value="Speak cheerfully, energetically, and clearly.">រីករាយ រស់រវើក</option>
+            <option value="Speak calmly, professionally, and clearly like a news anchor.">ម៉ឺងម៉ាត់ ព័ត៌មាន</option>
+            <option value="Speak slowly and pronounce every single syllable very clearly.">យឺតៗ ច្បាស់តាមព្យាង្គ</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>🧬 Custom / Cloned Voice ID (បើមាន)</label>
+          <input type="text" id="customVoiceId" placeholder="voice_... (ទុកទទេបើប្រើសំឡេងខាងលើ)" />
+        </div>
+        <div>
+          <label>⚡ ម៉ូដែលសំឡេង</label>
+          <select id="ttsModel">
+            <option value="AUTO">Auto (3.8 Flash ➔ Lite)</option>
+            <option value="gemini-3.8-flash-tts">Gemini 3.8 Flash TTS (ច្បាស់បំផុត)</option>
+            <option value="gemini-3.8-flash-lite-tts">Gemini 3.8 Lite TTS (លឿន)</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn" id="btnRunAll" type="button">🚀 បកប្រែ និងបង្កើតសំឡេង</button>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:6px">
+        <label style="margin:0">📄 អត្ថបទបកប្រែរួច (អាចកែសម្រួលបាន)</label>
+        <button class="btn btn-sm" id="copyTransBtn" type="button" style="flex:0 0 auto">📋 Copy</button>
+      </div>
+      <textarea id="translatedText" placeholder="អត្ថបទបកប្រែនឹងបង្ហាញនៅទីនេះ..."></textarea>
+      <button class="btn btn-blue" id="btnSpeakOnly" type="button" style="margin-bottom:10px">🔊 អានអត្ថបទនេះម្តងទៀត (មិនបាច់បកប្រែថ្មី)</button>
+
+      <label>🎧 សំឡេងមនុស្សពិត AI</label>
+      <audio id="audioPlayer" controls></audio>
+      <a id="downloadLink" class="btn btn-sm hidden" download="khmer_ai_voice.wav" style="display:inline-block;text-decoration:none;text-align:center;width:100%;margin-bottom:10px;background:#16a34a;">⬇️ ទាញយកសំឡេង (.WAV)</a>
+
+      <div class="status" id="statusBox">រួចរាល់! សូមបញ្ចូល API Key និងអត្ថបទ រួចចុចប៊ូតុងខាងលើ។</div>
+    </div>
+  </div>
+
+  <div id="tab2Panel" class="hidden">
+    <div class="card">
+      <h3 style="margin-top:0;font-size:1rem">✨ ក. រចនាសំឡេងថ្មីតាមការពិពណ៌នា (Voice Design)</h3>
+      <p class="hint">ពិពណ៌នាសំឡេងដែលបងចង់បានជាភាសាអង់គ្លេស ដើម្បីបង្កើត Voice ID ថ្មីផ្ទាល់ខ្លួន។</p>
+      <label>ឈ្មោះសំឡេង</label>
+      <input type="text" id="designName" value="My Storyteller" />
+      <div class="row">
+        <div>
+          <label>ភេទ</label>
+          <select id="designGender">
+            <option value="male">ប្រុស (Male)</option>
+            <option value="female">ស្រី (Female)</option>
+          </select>
+        </div>
+        <div>
+          <label>ភាសាគោល</label>
+          <input type="text" id="designLang" value="km-KH" />
+        </div>
+      </div>
+      <label>ការពិពណ៌នាសំឡេង (Prompt)</label>
+      <textarea id="designDesc" style="min-height:70px">A warm, clear, engaging Cambodian male storyteller in his 30s with a calm and natural pace.</textarea>
+      <button class="btn btn-blue" id="btnDesignVoice" type="button">✨ បង្កើតសំឡេងថ្មី</button>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;font-size:1rem">🧬 ខ. ក្លូនសំឡេងមនុស្សពិត (Voice Replication)</h3>
+      <p class="hint">ត្រូវការសំឡេងពិត ២ ឃ្លា (១០-៣០ វិនាទី) ពីមនុស្សតែម្នាក់៖<br>
+      ១. សំឡេងគំរូនិយាយធម្មតា<br>
+      ២. សំឡេងអានពាក្យយល់ព្រមជាអង់គ្លេស៖ <i>"I am the owner of this voice and I consent to Google using this voice to create a synthetic voice model."</i></p>
+      <label>ឈ្មោះសំឡេងក្លូន</label>
+      <input type="text" id="cloneName" value="My Cloned Voice" />
+      <label>១. ជ្រើសរើសសំឡេងគំរូ (MP3 / WAV / M4A)</label>
+      <input type="file" id="srcAudioFile" accept="audio/*" />
+      <label>២. ជ្រើសរើសសំឡេងយល់ព្រម</label>
+      <input type="file" id="conAudioFile" accept="audio/*" />
+      <button class="btn" id="btnCloneVoice" type="button">🧬 ចាប់ផ្តើមក្លូនសំឡេង</button>
+    </div>
+
+    <div class="card">
+      <label>🆔 លទ្ធផល Voice ID (បញ្ចូលទៅ Tab 1 ស្វ័យប្រវត្តិ)</label>
+      <div class="row">
+        <input type="text" id="createdVoiceId" readonly placeholder="voice_..." style="margin-bottom:0" />
+        <button class="btn btn-sm" id="copyVoiceIdBtn" type="button" style="flex:0 0 auto">📋 Copy</button>
+      </div>
+      <div class="status" id="cloneStatusBox" style="margin-top:10px">ចំណាំ៖ មុខងារបង្កើត/ក្លូនសំឡេង Google អាចតម្រូវឱ្យគណនី AI Studio បើក Billing ឬ Region ដែលគាំទ្រ។</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const apiKeyEl = document.getElementById('apiKey');
+  const keyStatusEl = document.getElementById('keyStatus');
+  const statusBox = document.getElementById('statusBox');
+  const cloneStatusBox = document.getElementById('cloneStatusBox');
+
+  const savedKey = localStorage.getItem('gemini_api_key') || '';
+  if (savedKey) {
+    apiKeyEl.value = savedKey;
+    keyStatusEl.textContent = '✅ បានផ្ទុក API Key ដែលរក្សាទុកក្នុងទូរស័ព្ទរួចហើយ';
+  }
+  apiKeyEl.addEventListener('input', () => {
+    const val = apiKeyEl.value.trim();
+    localStorage.setItem('gemini_api_key', val);
+    if (!val) {
+      keyStatusEl.textContent = 'យក Key ឥតគិតថ្លៃពី aistudio.google.com';
+    } else if (!/^AIza[0-9A-Za-z_\-]{20,}$/.test(val)) {
+      keyStatusEl.textContent = '⚠️ កូដ Key មិនត្រឹមត្រូវទេ! ត្រូវចាប់ផ្តើមដោយ AIza... និងគ្មានអក្សរខ្មែរ/ដកឃ្លា។';
+    } else {
+      keyStatusEl.textContent = '✅ បានរក្សាទុក Key ក្នុងទូរស័ព្ទ!';
+    }
+  });
+
+  document.getElementById('toggleKeyBtn').onclick = () => {
+    apiKeyEl.type = apiKeyEl.type === 'password' ? 'text' : 'password';
+  };
+
+  const tab1Btn = document.getElementById('tab1Btn');
+  const tab2Btn = document.getElementById('tab2Btn');
+  const tab1Panel = document.getElementById('tab1Panel');
+  const tab2Panel = document.getElementById('tab2Panel');
+  tab1Btn.onclick = () => {
+    tab1Btn.classList.add('active'); tab2Btn.classList.remove('active');
+    tab1Panel.classList.remove('hidden'); tab2Panel.classList.add('hidden');
+  };
+  tab2Btn.onclick = () => {
+    tab2Btn.classList.add('active'); tab1Btn.classList.remove('active');
+    tab2Panel.classList.remove('hidden'); tab1Panel.classList.add('hidden');
+  };
+
+  function validateKey() {
+    const k = apiKeyEl.value.trim();
+    if (!k) throw new Error('សូមបញ្ចូល Gemini API Key ជាមុនសិន!');
+    if (!/^[\x00-\x7F]+$/.test(k) || !k.startsWith('AIza')) {
+      throw new Error('API Key មិនត្រឹមត្រូវទេ! សូមលុបហើយ Paste តែកូដខ្លីដែលចាប់ផ្តើមដោយ AIzaSy...');
+    }
+    return k;
+  }
+
+  async function translateWithRetry(text, targetLang, style, apiKey) {
+    if (targetLang === 'NO_TRANSLATE') return text.trim();
+    const models = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+    const prompt = `បកប្រែអត្ថបទខាងក្រោមទៅជា ${targetLang} តាមស្ទីល "${style}"។\nលក្ខខណ្ឌ៖ បកប្រែឱ្យមានន័យធម្មជាតិ រលូន ច្បាស់លាស់ ដូចមនុស្សនិយាយពិតៗ និងកុំសរសេរការពន្យល់អ្វីបន្ថែមក្រៅពីអត្ថបទបកប្រែ។\n\n${text.trim()}`;
+
+    let lastErr = '';
+    for (const m of models) {
+      try {
+        statusBox.textContent = `⏳ កំពុងបកប្រែដោយប្រើ ${m}...`;
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+        });
+        const data = await res.json();
+        if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          return data.candidates[0].content.parts[0].text.trim();
+        }
+        lastErr = data.error?.message || `HTTP ${res.status}`;
+      } catch (e) {
+        lastErr = e.message;
+      }
+    }
+    throw new Error(`បកប្រែមិនបានជោគជ័យ (Server កំពុងណែន)៖ ${lastErr}`);
+  }
+
+  function base64ToBytes(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  function ensureWavBytes(bytes, sampleRate = 24000) {
+    if (bytes.length >= 4 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+      return bytes;
+    }
+    const header = new ArrayBuffer(44);
+    const view = new DataView(header);
+    const w = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); view.setUint32(4, 36 + bytes.length, true);
+    w(8, 'WAVE'); w(12, 'fmt '); view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    w(36, 'data'); view.setUint32(40, bytes.length, true);
+    const wav = new Uint8Array(44 + bytes.length);
+    wav.set(new Uint8Array(header), 0);
+    wav.set(bytes, 44);
+    return wav;
+  }
+
+  async function speakText(textToSpeak, apiKey) {
+    const customId = document.getElementById('customVoiceId').value.trim();
+    const voice = customId || document.getElementById('voiceSelect').value;
+    const tone = document.getElementById('toneStyle').value;
+    const chosenModel = document.getElementById('ttsModel').value;
+    const models = chosenModel === 'AUTO'
+      ? ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts']
+      : [chosenModel];
+
+    let lastErr = '';
+    for (const m of models) {
+      try {
+        statusBox.textContent = `🎙️ កំពុងបង្កើតសំឡេងមនុស្សពិត (${m})...`;
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: textToSpeak, speechMetadata: { style: tone } }] }],
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: { voiceConfig: { voice: voice } }
+            }
+          })
+        });
+        const data = await res.json();
+        const inline = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
+        if (res.ok && inline?.data) {
+          const rateMatch = (inline.mimeType || '').match(/rate=(\d+)/);
+          const sr = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+          const wav = ensureWavBytes(base64ToBytes(inline.data), sr);
+          const blob = new Blob([wav], { type: 'audio/wav' });
+          const url = URL.createObjectURL(blob);
+          document.getElementById('audioPlayer').src = url;
+          const dl = document.getElementById('downloadLink');
+          dl.href = url;
+          dl.classList.remove('hidden');
+          statusBox.textContent = `✅ ជោគជ័យ! បានបង្កើតសំឡេងដោយ ${m} (${voice})។`;
+          return;
+        }
+        lastErr = data.error?.message || `HTTP ${res.status}`;
+      } catch (e) {
+        lastErr = e.message;
+      }
+    }
+    throw new Error(`បង្កើតសំឡេងមិនបានជោគជ័យ៖ ${lastErr}`);
+  }
+
+  document.getElementById('btnRunAll').onclick = async () => {
+    const btn = document.getElementById('btnRunAll');
+    try {
+      const apiKey = validateKey();
+      const raw = document.getElementById('rawText').value;
+      if (!raw.trim()) throw new Error('សូមបញ្ចូលអត្ថបទដើមជាមុនសិន!');
+      btn.disabled = true;
+      const trans = await translateWithRetry(
+        raw,
+        document.getElementById('targetLang').value,
+        document.getElementById('transStyle').value,
+        apiKey
+      );
+      document.getElementById('translatedText').value = trans;
+      await speakText(trans, apiKey);
+    } catch (e) {
+      statusBox.textContent = `❌ ${e.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  document.getElementById('btnSpeakOnly').onclick = async () => {
+    const btn = document.getElementById('btnSpeakOnly');
+    try {
+      const apiKey = validateKey();
+      const txt = document.getElementById('translatedText').value.trim();
+      if (!txt) throw new Error('មិនមានអត្ថបទនៅក្នុងប្រអប់បកប្រែទេ!');
+      btn.disabled = true;
+      await speakText(txt, apiKey);
+    } catch (e) {
+      statusBox.textContent = `❌ ${e.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  document.getElementById('copyTransBtn').onclick = () => {
+    const t = document.getElementById('translatedText').value;
+    if (t) navigator.clipboard.writeText(t);
+  };
+
+  async function fileTo24kWavBase64(file) {
+    const arrBuf = await file.arrayBuffer();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const decoded = await ctx.decodeAudioData(arrBuf);
+    const rate = 24000;
+    const offline = new OfflineAudioContext(1, Math.ceil(decoded.duration * rate), rate);
+    const src = offline.createBufferSource();
+    src.buffer = decoded;
+    src.connect(offline.destination);
+    src.start(0);
+    const rendered = await offline.startRendering();
+    const f32 = rendered.getChannelData(0);
+    const pcm = new Uint8Array(f32.length * 2);
+    const dv = new DataView(pcm.buffer);
+    for (let i = 0; i < f32.length; i++) {
+      const s = Math.max(-1, Math.min(1, f32[i]));
+      dv.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    const wav = ensureWavBytes(pcm, rate);
+    let bin = '';
+    for (let i = 0; i < wav.length; i += 8192) {
+      bin += String.fromCharCode.apply(null, wav.subarray(i, i + 8192));
+    }
+    if (ctx.close) await ctx.close();
+    return btoa(bin);
+  }
+
+  document.getElementById('btnDesignVoice').onclick = async () => {
+    const btn = document.getElementById('btnDesignVoice');
+    try {
+      const apiKey = validateKey();
+      btn.disabled = true;
+      cloneStatusBox.textContent = '⏳ កំពុងបង្កើតសំឡេងថ្មី...';
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/voices?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store: true,
+          voice: {
+            model: 'gemini-3.8-flash-tts',
+            type: 'prompted',
+            display_name: document.getElementById('designName').value.trim() || 'Custom Voice',
+            gender: document.getElementById('designGender').value,
+            language_code: document.getElementById('designLang').value.trim() || 'km-KH',
+            prompted: { input: document.getElementById('designDesc').value.trim() }
+          }
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.id) {
+        document.getElementById('createdVoiceId').value = data.id;
+        document.getElementById('customVoiceId').value = data.id;
+        cloneStatusBox.textContent = '✅ បង្កើតសំឡេងថ្មីជោគជ័យ! បានដាក់ Voice ID ចូល Tab 1 រួចហើយ។';
+      } else {
+        cloneStatusBox.textContent = `⚠️ Google API (${res.status}): ${data.error?.message || JSON.stringify(data)}`;
+      }
+    } catch (e) {
+      cloneStatusBox.textContent = `❌ ${e.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  document.getElementById('btnCloneVoice').onclick = async () => {
+    const btn = document.getElementById('btnCloneVoice');
+    try {
+      const apiKey = validateKey();
+      const f1 = document.getElementById('srcAudioFile').files[0];
+      const f2 = document.getElementById('conAudioFile').files[0];
+      if (!f1 || !f2) throw new Error('សូមជ្រើសរើសឯកសារសំឡេងទាំង ២ ជាមុនសិន!');
+      btn.disabled = true;
+      cloneStatusBox.textContent = '⏳ កំពុងបំប្លែងសំឡេង និងផ្ញើទៅក្លូន...';
+      const srcB64 = await fileTo24kWavBase64(f1);
+      const conB64 = await fileTo24kWavBase64(f2);
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/voices?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store: true,
+          voice: {
+            model: 'gemini-3.8-flash-tts',
+            type: 'replicated',
+            display_name: document.getElementById('cloneName').value.trim() || 'Cloned Voice',
+            replicated: {
+              source_audio: { mime_type: 'audio/wav', data: srcB64 },
+              consent_audio: { mime_type: 'audio/wav', data: conB64 }
+            }
+          }
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.id) {
+        document.getElementById('createdVoiceId').value = data.id;
+        document.getElementById('customVoiceId').value = data.id;
+        cloneStatusBox.textContent = '✅ ក្លូនសំឡេងជោគជ័យ! បានដាក់ Voice ID ចូល Tab 1 រួចហើយ។';
+      } else {
+        cloneStatusBox.textContent = `⚠️ Google API (${res.status}): ${data.error?.message || JSON.stringify(data)}`;
+      }
+    } catch (e) {
+      cloneStatusBox.textContent = `❌ ${e.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  document.getElementById('copyVoiceIdBtn').onclick = () => {
+    const v = document.getElementById('createdVoiceId').value;
+    if (v) navigator.clipboard.writeText(v);
+  };
+</script>
+</body>
+</html>
